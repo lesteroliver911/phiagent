@@ -168,8 +168,23 @@ class ReportFormatter:
         cleaned = re.sub(r'^\s*\n', '', cleaned)
         return cleaned.strip()
         
-    def format_document(self, content, title):
-        # Add title with formatting
+    def add_section(self, title, content):
+        """Add a new section with heading and content"""
+        # Add section heading
+        section_heading = self.document.add_heading(level=1)
+        heading_run = section_heading.add_run(title)
+        heading_run.bold = True
+        
+        # Add content
+        cleaned_content = self.clean_output(content)
+        self.document.add_paragraph(cleaned_content)
+        
+        # Add separator
+        self.document.add_paragraph('_' * 50)
+
+    def format_document(self, title, agent_outputs):
+        """Format document with multiple agent outputs"""
+        # Add main title
         title_heading = self.document.add_heading(level=0)
         title_run = title_heading.add_run(title)
         title_run.bold = True
@@ -183,10 +198,10 @@ class ReportFormatter:
         # Add separator
         self.document.add_paragraph('_' * 50)
         
-        # Add content with clean formatting
-        cleaned_content = self.clean_output(content)
-        self.document.add_paragraph(cleaned_content)
-        
+        # Add each agent's output as a separate section
+        for agent_name, output in agent_outputs:
+            self.add_section(f"{agent_name} Analysis", output)
+
     def save(self, business_type):
         # Create reports directory if it doesn't exist
         if not os.path.exists('reports'):
@@ -203,34 +218,52 @@ class ReportFormatter:
 def start_business_analysis():
     business_type = input("What kind of company do you want to create? ")
     
-    prompt = (
-        f"Provide a comprehensive analysis for the {business_type} industry:\n\n"
-        "1. INDUSTRY OVERVIEW\n"
-        "- Latest news and developments\n"
-        "- Major players and market dynamics\n\n"
-        "2. FINANCIAL ANALYSIS\n"
-        "- Key public companies' performance\n"
-        "- Industry financial metrics\n"
-        "- Investment trends\n\n"
-        "3. MARKET ANALYSIS\n"
-        "- Market size and growth rates\n"
-        "- Competitive landscape\n"
-        "- Industry trends and opportunities\n\n"
-        "Present data in tables where appropriate and include sources for all information."
-    )
+    # Create base prompts for each agent
+    web_prompt = f"Provide latest news and developments in the {business_type} industry"
+    market_prompt = f"Based on the above news, provide detailed market analysis for {business_type} industry"
+    finance_prompt = f"Analyze financial metrics of key players in the {business_type} industry"
+    value_prompt = f"Develop strategic recommendations for entering the {business_type} market"
+    org_prompt = f"Propose organizational structure for a {business_type} company"
     
     try:
         print(f"\n=== {business_type.title()} Industry Analysis ===\n")
-        response = agent_team.print_response(prompt, stream=True)
+        
+        # Collect outputs from each agent
+        agent_outputs = []
+        
+        # Web Agent
+        print("\nGathering latest news...")
+        web_response = web_agent.run(web_prompt)
+        agent_outputs.append(("Industry News", str(web_response)))
+        
+        # Tech Market Agent
+        print("\nAnalyzing market...")
+        market_response = tech_market_agent.run(market_prompt)
+        agent_outputs.append(("Market Analysis", str(market_response)))
+        
+        # Finance Agent
+        print("\nAnalyzing financials...")
+        finance_response = finance_agent.run(finance_prompt)
+        agent_outputs.append(("Financial Analysis", str(finance_response)))
+        
+        # Value Capture Agent
+        print("\nDeveloping strategies...")
+        value_response = value_capture_agent.run(value_prompt)
+        agent_outputs.append(("Strategic Recommendations", str(value_response)))
+        
+        # Org Design Agent
+        print("\nDesigning organization...")
+        org_response = org_design_agent.run(org_prompt)
+        agent_outputs.append(("Organizational Design", str(org_response)))
         
         # Create and save the document
         formatter = ReportFormatter()
         title = f"{business_type.title()} Industry Analysis Report"
-        formatter.format_document(str(response), title)
+        formatter.format_document(title, agent_outputs)
         filename = formatter.save(business_type)
         
         print(f"\nDetailed report saved as: {filename}")
-        # Open the file automatically (optional)
+        # Open the file automatically
         os.system(f"start {filename}" if os.name == 'nt' else f"open {filename}")
         
     except Exception as e:
