@@ -12,9 +12,11 @@ web_agent = Agent(
     model=OpenAIChat(id="gpt-4o"),
     tools=[GoogleSearch()],
     instructions=[
-        "Given a topic by the user, respond with 4 latest news items about that topic.",
-        "Search for 10 news items and select the top 4 unique items.",
-        "Search in English and in French.",
+        "Given a topic by the user, respond with 3 latest news items about that topic.",
+        "Search for 3 news items and select the top 3 unique items.",
+        "Search in English only.",
+        "Ensure all URLs are complete and valid.",
+        "Keep descriptions concise and focused."
     ],
     show_tool_calls=True,
     markdown=True,
@@ -138,9 +140,13 @@ def start_business_analysis():
 start_business_analysis()
 
 def test_web_agent():
-    test_prompt = "Search for the top 5 latest news items about AI startups."
-    response = web_agent.print_response(test_prompt, stream=True)
-    print("Web Agent Response:", response)
+    test_prompt = "Search for the top 3 latest news items about AI startups."
+    try:
+        response = web_agent.print_response(test_prompt, stream=True)
+        print("Web Agent Response:", response)
+    except Exception as e:
+        print(f"Error occurred: {str(e)}")
+        print("Try reducing the search scope or checking the response format.")
 
 # Call the test function
 test_web_agent()
